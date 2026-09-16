@@ -5,8 +5,18 @@ import { ADDONS } from "@/lib/menu";
 import { STORE, brl } from "@/lib/store-config";
 
 export function CartDrawer() {
-  const { open, setOpen, lines, setQty, remove, toggleAddon, subtotal, deliveryFee, total } =
-    useCart();
+  const {
+    open,
+    setOpen,
+    lines,
+    setQty,
+    remove,
+    toggleAddon,
+    setNote,
+    subtotal,
+    deliveryFee,
+    total,
+  } = useCart();
 
   return (
     <>
@@ -48,8 +58,9 @@ export function CartDrawer() {
                   src={line.image}
                   alt={line.name}
                   loading="lazy"
-                  width={1024}
-                  height={1024}
+                  decoding="async"
+                  width={800}
+                  height={800}
                   className="size-16 shrink-0 object-contain"
                 />
                 <div className="min-w-0 flex-1">
@@ -107,6 +118,19 @@ export function CartDrawer() {
                   </div>
                 </div>
               </div>
+
+              <label className="mt-3 block">
+                <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  Observações
+                </span>
+                <textarea
+                  value={line.note}
+                  onChange={(e) => setNote(line.key, e.target.value)}
+                  rows={2}
+                  placeholder="Sem cebola, ponto da carne, etc."
+                  className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary"
+                />
+              </label>
             </div>
           ))}
         </div>
