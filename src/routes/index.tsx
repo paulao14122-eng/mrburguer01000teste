@@ -211,7 +211,7 @@ function Home() {
           <div className="glow-ring relative flex justify-center">
             <img
               ref={pinImgRef}
-              key={active.id}
+              
               src={active.image}
               alt={`Hambúrguer ${active.name}`}
               loading="lazy"
