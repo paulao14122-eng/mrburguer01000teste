@@ -1,7 +1,7 @@
-import coronel from "@/assets/burger-coronel.png";
-import cheddar from "@/assets/burger-cheddar.png";
-import bacon from "@/assets/burger-bacon.png";
-import duplo from "@/assets/burger-duplo.png";
+import coronel from "@/assets/burger-coronel.webp";
+import cheddar from "@/assets/burger-cheddar.webp";
+import bacon from "@/assets/burger-bacon.webp";
+import duplo from "@/assets/burger-duplo.webp";
 
 export type MenuItem = {
   id: string;
@@ -10,6 +10,7 @@ export type MenuItem = {
   description: string;
   price: number;
   image: string;
+  bestSeller?: boolean;
 };
 
 export const ADDONS = [
@@ -26,6 +27,17 @@ export const MENU: MenuItem[] = [
       "Blend 180g na brasa, cheddar derretido, cebola caramelizada e o molho secreto da casa no pão brioche.",
     price: 32,
     image: coronel,
+    bestSeller: true,
+  },
+  {
+    id: "mr-duplo",
+    name: "MR. DUPLO",
+    tagline: "PRA MATAR A FOME",
+    description:
+      "Dois blends de 160g, queijo dobrado, bacon, salada fresca e molho especial. O maior da casa.",
+    price: 38,
+    image: duplo,
+    bestSeller: true,
   },
   {
     id: "mr-cheddar",
@@ -44,14 +56,5 @@ export const MENU: MenuItem[] = [
       "Blend 160g, fatias generosas de bacon crocante defumado, queijo e maionese artesanal.",
     price: 30,
     image: bacon,
-  },
-  {
-    id: "mr-duplo",
-    name: "MR. DUPLO",
-    tagline: "PRA MATAR A FOME",
-    description:
-      "Dois blends de 160g, queijo dobrado, bacon, salada fresca e molho especial. O maior da casa.",
-    price: 38,
-    image: duplo,
   },
 ];

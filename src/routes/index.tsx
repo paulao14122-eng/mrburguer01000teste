@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Check, Flame, Star, Truck, UtensilsCrossed } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { MENU } from "@/lib/menu";
@@ -8,19 +8,17 @@ import { STORE, brl, waLink } from "@/lib/store-config";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MRBURGUER01 — O Artesanal Irresistível | Delivery Abaré-BA" },
+      { title: "MRBURGER01 — O Artesanal Irresistível | Delivery Abaré-BA" },
       {
         name: "description",
         content:
-          "Hambúrguer artesanal na brasa com entrega em Abaré-BA. Monte seu pedido, pague no PIX e receba quentinho.",
+          "Hambúrguer artesanal na brasa com entrega em 30-40 min em Abaré-BA. Monte seu pedido, pague no PIX e receba quentinho.",
       },
-      {
-        property: "og:title",
-        content: "MRBURGUER01 — O Artesanal Irresistível",
-      },
+      { property: "og:title", content: "MRBURGER01 — O Artesanal Irresistível" },
       {
         property: "og:description",
-        content: "Apenas delivery em Abaré-BA. Blend na brasa, cheddar derretido e molho da casa.",
+        content:
+          "Apenas delivery em Abaré-BA. Blend na brasa, cheddar derretido e entrega em 30-40 min.",
       },
     ],
   }),
@@ -29,8 +27,8 @@ export const Route = createFileRoute("/")({
 
 const BENEFITS = [
   "Blend artesanal feito na brasa na hora",
-  "Entrega rápida em toda Abaré - BA",
-  "Pague no PIX direto pelo site",
+  `Entrega em ${STORE.deliveryTime} em toda ${STORE.city}`,
+  "Pague no PIX, cartão ou dinheiro",
   "Adicionais de bacon e cheddar extra",
 ];
 
@@ -52,9 +50,6 @@ const REVIEWS = [
 function Home() {
   const { add } = useCart();
   const heroImgRef = useRef<HTMLImageElement>(null);
-  const pinSectionRef = useRef<HTMLDivElement>(null);
-  const pinImgRef = useRef<HTMLImageElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     let cleanup = () => {};
@@ -69,12 +64,11 @@ function Home() {
       gsap.registerPlugin(ScrollTrigger);
 
       const ctx = gsap.context(() => {
-        // Hero: burger gira e sobe suavemente conforme o scroll
         if (heroImgRef.current) {
           gsap.to(heroImgRef.current, {
-            rotate: 28,
-            scale: 1.08,
-            y: -60,
+            rotate: 26,
+            scale: 1.06,
+            y: -50,
             ease: "none",
             scrollTrigger: {
               trigger: heroImgRef.current,
@@ -85,36 +79,13 @@ function Home() {
           });
         }
 
-        // Cardápio: seção fixa (pin) e o burger gira trocando de item
-        if (pinSectionRef.current && pinImgRef.current) {
-          gsap.to(pinImgRef.current, {
-            rotate: 360,
-            ease: "none",
-            scrollTrigger: {
-              trigger: pinSectionRef.current,
-              start: "top top",
-              end: `+=${MENU.length * 100}%`,
-              scrub: 0.8,
-              pin: true,
-              anticipatePin: 1,
-              onUpdate: (self) => {
-                const idx = Math.min(
-                  MENU.length - 1,
-                  Math.floor(self.progress * MENU.length),
-                );
-                setActiveIndex(idx);
-              },
-            },
-          });
-        }
-
         gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
           gsap.from(el, {
-            y: 40,
+            y: 32,
             opacity: 0,
-            duration: 0.8,
+            duration: 0.6,
             ease: "power3.out",
-            scrollTrigger: { trigger: el, start: "top 88%" },
+            scrollTrigger: { trigger: el, start: "top 90%" },
           });
         });
       });
@@ -128,21 +99,21 @@ function Home() {
     };
   }, []);
 
-  const active = MENU[activeIndex]!;
-
   return (
     <>
       {/* HERO */}
-      <section className="relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 lg:pt-16">
+      <section className="relative overflow-hidden px-4 pb-14 pt-8 sm:px-6 lg:pt-14">
         <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
           <div className="glow-ring relative order-2 flex justify-center lg:order-1">
             <img
               ref={heroImgRef}
               src={MENU[0]!.image}
               alt="Hambúrguer artesanal MR. CORONEL com cheddar derretido"
-              width={1024}
-              height={1024}
-              className="w-full max-w-[560px] drop-shadow-[0_40px_60px_rgba(0,0,0,0.75)]"
+              width={800}
+              height={800}
+              fetchPriority="high"
+              decoding="async"
+              className="w-full max-w-[520px] drop-shadow-[0_40px_60px_rgba(0,0,0,0.75)]"
             />
           </div>
 
@@ -176,7 +147,7 @@ function Home() {
                 Montar meu pedido
               </a>
               <a
-                href={waLink("Olá! Quero pedir no MRBURGUER01 🍔")}
+                href={waLink(`Olá, ${STORE.name}! Quero pedir 🍔`)}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-full border border-border px-7 py-4 text-sm font-extrabold uppercase tracking-[0.14em] transition-colors hover:border-primary hover:text-primary"
@@ -193,99 +164,63 @@ function Home() {
         <div className="marquee-track font-display text-2xl uppercase text-muted-foreground sm:text-3xl">
           {Array.from({ length: 2 }).map((_, i) => (
             <span key={i} className="flex">
-              {["Na brasa", "Blend artesanal", "Só delivery", "Abaré - BA", "Chega quentinho"].map(
-                (t) => (
-                  <span key={t} className="mx-6 flex items-center gap-6">
-                    {t} <span className="text-primary">•</span>
-                  </span>
-                ),
-              )}
+              {[
+                "Na brasa",
+                "Blend artesanal",
+                "Só delivery",
+                `Entrega ${STORE.deliveryTime}`,
+                "Chega quentinho",
+              ].map((t) => (
+                <span key={t} className="mx-6 flex items-center gap-6">
+                  {t} <span className="text-primary">•</span>
+                </span>
+              ))}
             </span>
           ))}
         </div>
       </div>
 
-      {/* CARDÁPIO COM PIN SCROLL */}
-      <section id="cardapio" ref={pinSectionRef} className="relative overflow-hidden">
-        <div className="mx-auto grid min-h-screen max-w-7xl items-center gap-8 px-4 py-16 sm:px-6 lg:grid-cols-2">
-          <div className="glow-ring relative flex justify-center">
-            <img
-              ref={pinImgRef}
-              key={active.id}
-              src={active.image}
-              alt={`Hambúrguer ${active.name}`}
-              loading="lazy"
-              width={1024}
-              height={1024}
-              className="w-full max-w-[480px] drop-shadow-[0_40px_60px_rgba(0,0,0,0.75)]"
-            />
-          </div>
-
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-primary">
-              Cardápio · {activeIndex + 1}/{MENU.length}
-            </p>
-            <h2 className="mt-3 text-[clamp(2.25rem,6vw,4.5rem)] text-3d">{active.name}</h2>
-            <p className="mt-2 text-xs font-bold uppercase tracking-[0.25em] text-accent">
-              {active.tagline}
-            </p>
-            <p className="mt-5 max-w-md text-base text-muted-foreground">{active.description}</p>
-            <p className="mt-7 font-display text-4xl text-primary">{brl(active.price)}</p>
-            <button
-              type="button"
-              onClick={() => add(active)}
-              className="btn-neon mt-6 rounded-full px-8 py-4 text-sm font-extrabold uppercase tracking-[0.14em]"
-            >
-              Adicionar ao pedido
-            </button>
-
-            <div className="mt-10 flex gap-2">
-              {MENU.map((item, i) => (
-                <span
-                  key={item.id}
-                  className={`h-1 flex-1 rounded-full transition-colors ${
-                    i === activeIndex ? "bg-primary" : "bg-border"
-                  }`}
-                />
-              ))}
-            </div>
-            <p className="mt-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Continue rolando para ver os outros
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* LISTA COMPLETA (mobile friendly / conversão) */}
-      <section className="px-4 py-20 sm:px-6">
+      {/* CARDÁPIO EM GRADE */}
+      <section id="cardapio" className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <h2 className="text-center text-[clamp(2rem,5vw,3.5rem)]" data-reveal>
-            Todos os burgers
-          </h2>
+          <div className="text-center" data-reveal>
+            <h2 className="text-[clamp(2rem,6vw,3.75rem)] text-3d">Cardápio</h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Escolha, adicione e finalize em menos de 1 minuto.
+            </p>
+          </div>
+
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {MENU.map((item) => (
               <article
                 key={item.id}
                 data-reveal
-                className="rounded-2xl border border-border bg-card p-5 text-center transition-colors hover:border-primary/60"
+                className="relative flex flex-col rounded-2xl border border-border bg-card p-5 text-center transition-colors hover:border-primary/60"
               >
+                {item.bestSeller && (
+                  <span className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-primary-foreground">
+                    Mais pedido
+                  </span>
+                )}
                 <img
                   src={item.image}
                   alt={`Hambúrguer ${item.name}`}
                   loading="lazy"
-                  width={1024}
-                  height={1024}
-                  className="mx-auto w-full max-w-[220px] float-soft"
+                  decoding="async"
+                  width={800}
+                  height={800}
+                  className="mx-auto w-full max-w-[240px]"
                 />
                 <h3 className="mt-4 text-xl">{item.name}</h3>
-                <p className="mt-2 min-h-[60px] text-sm text-muted-foreground">
-                  {item.description}
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
+                  {item.tagline}
                 </p>
-                <p className="mt-3 font-display text-2xl text-primary">{brl(item.price)}</p>
+                <p className="mt-3 flex-1 text-sm text-muted-foreground">{item.description}</p>
+                <p className="mt-4 font-display text-3xl text-primary">{brl(item.price)}</p>
                 <button
                   type="button"
                   onClick={() => add(item)}
-                  className="btn-neon mt-4 w-full rounded-full py-3 text-xs font-extrabold uppercase tracking-[0.14em]"
+                  className="btn-neon mt-4 w-full rounded-full py-3.5 text-xs font-extrabold uppercase tracking-[0.14em]"
                 >
                   Adicionar
                 </button>
@@ -296,7 +231,10 @@ function Home() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="border-y border-border bg-secondary/20 px-4 py-20 sm:px-6">
+      <section
+        id="como-funciona"
+        className="border-y border-border bg-secondary/20 px-4 py-20 sm:px-6"
+      >
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center text-[clamp(2rem,5vw,3.5rem)]" data-reveal>
             Como funciona
@@ -320,10 +258,7 @@ function Home() {
       {/* PROVA SOCIAL */}
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
-          <div
-            data-reveal
-            className="rounded-3xl border border-border bg-card p-8 text-center"
-          >
+          <div data-reveal className="rounded-3xl border border-border bg-card p-8 text-center">
             <p className="font-display text-3xl">{STORE.instagram}</p>
             <p className="mt-2 text-sm text-muted-foreground">
               578 seguidores apaixonados · Apenas delivery 🍔✨
@@ -361,14 +296,14 @@ function Home() {
       </section>
 
       {/* CTA FINAL */}
-      <section className="px-4 pb-24 sm:px-6">
+      <section className="px-4 pb-28 sm:px-6">
         <div
           data-reveal
           className="mx-auto max-w-4xl rounded-3xl border border-primary/40 bg-secondary/30 p-10 text-center"
         >
           <h2 className="text-[clamp(2rem,6vw,4rem)] text-3d">Bateu a fome?</h2>
           <p className="mt-4 text-muted-foreground">
-            Monte seu pedido, pague no PIX e receba quentinho em {STORE.city}.
+            Monte seu pedido e receba em {STORE.deliveryTime} em {STORE.city}.
           </p>
           <a
             href="#cardapio"

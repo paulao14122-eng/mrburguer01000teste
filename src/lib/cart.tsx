@@ -18,6 +18,7 @@ export type CartLine = {
   qty: number;
   image: string;
   addons: string[];
+  note: string;
 };
 
 type CartContextValue = {
@@ -28,6 +29,7 @@ type CartContextValue = {
   remove: (key: string) => void;
   setQty: (key: string, qty: number) => void;
   toggleAddon: (key: string, addonId: string) => void;
+  setNote: (key: string, note: string) => void;
   clear: () => void;
   count: number;
   subtotal: number;
@@ -36,7 +38,7 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const STORAGE_KEY = "mrburguer-cart";
+const STORAGE_KEY = "mrburger-cart";
 
 function addonPrice(ids: string[]) {
   return ids.reduce((sum, id) => sum + (ADDONS.find((a) => a.id === id)?.price ?? 0), 0);
@@ -49,7 +51,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setLines(JSON.parse(raw) as CartLine[]);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CartLine[];
+        setLines(parsed.map((l) => ({ ...l, note: l.note ?? "" })));
+      }
     } catch {
       /* ignora carrinho inválido */
     }
@@ -79,6 +84,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           qty: 1,
           image: item.image,
           addons: [],
+          note: "",
         },
       ];
     });
@@ -112,6 +118,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const setNote = useCallback((key: string, note: string) => {
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, note } : l)));
+  }, []);
+
   const clear = useCallback(() => setLines([]), []);
 
   const value = useMemo<CartContextValue>(() => {
@@ -128,13 +138,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove,
       setQty,
       toggleAddon,
+      setNote,
       clear,
       count: lines.reduce((sum, l) => sum + l.qty, 0),
       subtotal,
       deliveryFee,
       total: subtotal + deliveryFee,
     };
-  }, [lines, open, add, remove, setQty, toggleAddon, clear]);
+  }, [lines, open, add, remove, setQty, toggleAddon, setNote, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
@@ -147,6 +158,13 @@ export function useCart() {
 
 export function lineTotal(line: CartLine) {
   return (line.price + addonPrice(line.addons)) * line.qty;
+}
+
+export function addonNames(ids: string[]) {
+  return ids
+    .map((id) => ADDONS.find((a) => a.id === id)?.name)
+    .filter(Boolean)
+    .join(", ");
 }
 
 export { addonPrice };
