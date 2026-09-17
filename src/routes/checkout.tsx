@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Copy, CreditCard, Loader2, QrCode } from "lucide-react";
-import { lineTotal, useCart } from "@/lib/cart";
-import { ADDONS } from "@/lib/menu";
-import { STORE, brl, waLink } from "@/lib/store-config";
+import { Banknote, Check, Copy, CreditCard, Loader2, QrCode, Upload } from "lucide-react";
+import { addonNames, lineTotal, useCart } from "@/lib/cart";
+import { STORE, absoluteUrl, brl, waLink } from "@/lib/store-config";
 import {
   MP_TEST_MODE,
   createMockPayment,
@@ -14,16 +13,16 @@ import {
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
-      { title: "Finalizar pedido — MRBURGUER01 Delivery Abaré-BA" },
+      { title: "Finalizar pedido — MRBURGER01 Delivery Abaré-BA" },
       {
         name: "description",
         content:
-          "Informe seu endereço, pague no PIX ou cartão e receba seu hambúrguer artesanal quentinho em Abaré-BA.",
+          "Escolha PIX, cartão ou dinheiro, informe seu endereço e receba seu hambúrguer artesanal em 30-40 min em Abaré-BA.",
       },
-      { property: "og:title", content: "Finalizar pedido — MRBURGUER01" },
+      { property: "og:title", content: "Finalizar pedido — MRBURGER01" },
       {
         property: "og:description",
-        content: "Checkout rápido com PIX e cartão para delivery em Abaré-BA.",
+        content: "Checkout rápido com PIX, cartão e dinheiro para delivery em Abaré-BA.",
       },
     ],
   }),
@@ -36,6 +35,19 @@ type Form = {
   address: string;
   district: string;
   reference: string;
+  receiptLink: string;
+};
+
+const METHODS = [
+  { id: "pix" as PaymentMethod, label: "PIX", icon: QrCode },
+  { id: "card" as PaymentMethod, label: "Cartão", icon: CreditCard },
+  { id: "cash" as PaymentMethod, label: "Dinheiro", icon: Banknote },
+];
+
+const METHOD_LABEL: Record<PaymentMethod, string> = {
+  pix: "PIX ✅",
+  card: "CARTÃO ✅",
+  cash: "DINHEIRO NA ENTREGA",
 };
 
 function Checkout() {
@@ -47,9 +59,11 @@ function Checkout() {
     address: "",
     district: "",
     reference: "",
+    receiptLink: "",
   });
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [card, setCard] = useState({ number: "", name: "", expiry: "", cvv: "" });
+  const [receiptName, setReceiptName] = useState("");
   const [status, setStatus] = useState<"form" | "paying" | "approved">("form");
   const [paymentId, setPaymentId] = useState("");
   const [copied, setCopied] = useState(false);
@@ -59,24 +73,38 @@ function Checkout() {
 
   const itemsText = lines
     .map((l) => {
-      const extras = l.addons
-        .map((a) => ADDONS.find((x) => x.id === a)?.name)
-        .filter(Boolean)
-        .join(", ");
-      return `${l.qty}x ${l.name}${extras ? ` (${extras})` : ""} - ${brl(lineTotal(l))}`;
+      const extras = addonNames(l.addons);
+      return (
+        `• ${l.qty}x ${l.name} — ${brl(lineTotal(l))}\n` +
+        (extras ? `   Adicionais: ${extras}\n` : "") +
+        (l.note ? `   Obs: ${l.note}\n` : "") +
+        `   Foto: ${absoluteUrl(l.image)}`
+      );
     })
     .join("\n");
 
+  const receiptText =
+    method === "pix"
+      ? form.receiptLink
+        ? `Comprovante: ${form.receiptLink}`
+        : receiptName
+          ? `Comprovante: ${receiptName} (vou anexar aqui no WhatsApp)`
+          : "Comprovante: enviar aqui no WhatsApp"
+      : "";
+
   const orderMessage = (id: string) =>
-    `🔥 NOVO PEDIDO - ${STORE.name}\n` +
+    `🔥 NOVO PEDIDO - ${STORE.name}\n\n` +
     `Cliente: ${form.name}\n` +
     `Telefone: ${form.phone}\n` +
     `End: ${form.address}, ${form.district}\n` +
     (form.reference ? `Referência: ${form.reference}\n` : "") +
-    `Pedido:\n${itemsText}\n` +
-    `Entrega: ${brl(deliveryFee)}\n` +
-    `Total: ${brl(total)} - PAGO VIA ${method === "pix" ? "PIX" : "CARTÃO"} ✅\n` +
-    `Pagamento: ${id}`;
+    `\nPedido:\n${itemsText}\n\n` +
+    `Subtotal: ${brl(subtotal)}\n` +
+    `Entrega (${STORE.city}): ${brl(deliveryFee)}\n` +
+    `Total: ${brl(total)}\n` +
+    `Pagamento: ${METHOD_LABEL[method]}\n` +
+    (method === "cash" ? "" : `ID pagamento: ${id}\n`) +
+    (receiptText ? `${receiptText}\n` : "");
 
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
@@ -116,10 +144,12 @@ function Checkout() {
         <span className="mx-auto grid size-16 place-items-center rounded-full bg-primary">
           <Check className="size-8 text-primary-foreground" />
         </span>
-        <h1 className="mt-6 text-[clamp(2rem,6vw,3rem)] text-3d">Pagamento aprovado</h1>
+        <h1 className="mt-6 text-[clamp(2rem,6vw,3rem)] text-3d">
+          {method === "cash" ? "Pedido confirmado" : "Pagamento aprovado"}
+        </h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Pagamento {paymentId} confirmado. Agora envie o pedido para a cozinha no WhatsApp — a
-          mensagem já vai pronta.
+          Agora envie o pedido para a cozinha no WhatsApp — a mensagem já vai pronta com todos os
+          detalhes.
         </p>
         <button
           type="button"
@@ -139,39 +169,11 @@ function Checkout() {
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <h1 className="text-[clamp(2rem,6vw,3.5rem)] text-3d">Finalizar pedido</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        Entrega apenas em {STORE.city} · Taxa {brl(STORE.deliveryFee)}
+        Entrega em {STORE.deliveryTime} · {STORE.city} · Taxa {brl(STORE.deliveryFee)}
       </p>
 
       <form onSubmit={handlePay} className="mt-10 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
         <div className="space-y-8">
-          <fieldset className="rounded-2xl border border-border bg-card p-6">
-            <legend className="px-2 font-display text-xl">Seus dados</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nome completo" value={form.name} onChange={set("name")} required />
-              <Field
-                label="WhatsApp"
-                value={form.phone}
-                onChange={set("phone")}
-                placeholder="(74) 90000-0000"
-                required
-              />
-              <Field
-                label="Endereço (rua e número)"
-                value={form.address}
-                onChange={set("address")}
-                className="sm:col-span-2"
-                required
-              />
-              <Field label="Bairro" value={form.district} onChange={set("district")} required />
-              <Field
-                label="Ponto de referência"
-                value={form.reference}
-                onChange={set("reference")}
-                placeholder="Perto da praça..."
-              />
-            </div>
-          </fieldset>
-
           <fieldset className="rounded-2xl border border-border bg-card p-6">
             <legend className="px-2 font-display text-xl">Forma de pagamento</legend>
             {MP_TEST_MODE && (
@@ -180,18 +182,13 @@ function Checkout() {
                 ativar os pagamentos reais.
               </p>
             )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(
-                [
-                  { id: "pix" as PaymentMethod, label: "PIX (QR Code)", icon: QrCode },
-                  { id: "card" as PaymentMethod, label: "Cartão", icon: CreditCard },
-                ] as const
-              ).map(({ id, label, icon: Icon }) => (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {METHODS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setMethod(id)}
-                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold uppercase tracking-wide transition-colors ${
                     method === id
                       ? "border-primary text-primary"
                       : "border-border text-muted-foreground hover:border-primary/60"
@@ -203,32 +200,59 @@ function Checkout() {
             </div>
 
             {method === "pix" && (
-              <div className="mt-6 flex flex-col items-center gap-4 rounded-xl border border-border bg-secondary/30 p-5 sm:flex-row">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                    mockPixCode(total),
-                  )}`}
-                  alt="QR Code PIX do pedido"
-                  loading="lazy"
-                  width={200}
-                  height={200}
-                  className="rounded-lg bg-foreground p-2"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold">Pague {brl(total)} no PIX</p>
-                  <p className="mt-1 break-all text-[11px] text-muted-foreground">
-                    {mockPixCode(total)}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(mockPixCode(total));
-                      setCopied(true);
-                    }}
-                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-bold uppercase tracking-wide hover:border-primary"
-                  >
-                    <Copy className="size-3.5" /> {copied ? "Copiado" : "Copiar código"}
-                  </button>
+              <div className="mt-6 space-y-4 rounded-xl border border-border bg-secondary/30 p-5">
+                <div className="flex flex-col items-center gap-4 sm:flex-row">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                      mockPixCode(total),
+                    )}`}
+                    alt="QR Code PIX do pedido"
+                    loading="lazy"
+                    decoding="async"
+                    width={200}
+                    height={200}
+                    className="rounded-lg bg-foreground p-2"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold">Pague {brl(total)} no PIX</p>
+                    <p className="mt-1 break-all text-[11px] text-muted-foreground">
+                      {mockPixCode(total)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(mockPixCode(total));
+                        setCopied(true);
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-bold uppercase tracking-wide hover:border-primary"
+                    >
+                      <Copy className="size-3.5" /> {copied ? "Copiado" : "Copiar código"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                      Comprovante do PIX
+                    </span>
+                    <span className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-4 py-3 text-sm text-muted-foreground hover:border-primary">
+                      <Upload className="size-4" />
+                      {receiptName || "Anexar imagem"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setReceiptName(e.target.files?.[0]?.name ?? "")}
+                      />
+                    </span>
+                  </label>
+                  <Field
+                    label="Link do comprovante (opcional)"
+                    value={form.receiptLink}
+                    onChange={set("receiptLink")}
+                    placeholder="https://..."
+                  />
                 </div>
               </div>
             )}
@@ -266,23 +290,70 @@ function Checkout() {
                 />
               </div>
             )}
+
+            {method === "cash" && (
+              <p className="mt-6 rounded-xl border border-border bg-secondary/30 p-4 text-sm text-muted-foreground">
+                Você paga {brl(total)} em dinheiro na entrega. Se precisar de troco, escreva nas
+                observações do pedido.
+              </p>
+            )}
+          </fieldset>
+
+          <fieldset className="rounded-2xl border border-border bg-card p-6">
+            <legend className="px-2 font-display text-xl">Nome e endereço</legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nome completo" value={form.name} onChange={set("name")} required />
+              <Field
+                label="WhatsApp"
+                value={form.phone}
+                onChange={set("phone")}
+                placeholder="(74) 90000-0000"
+                required
+              />
+              <Field
+                label="Endereço (rua e número)"
+                value={form.address}
+                onChange={set("address")}
+                className="sm:col-span-2"
+                required
+              />
+              <Field label="Bairro" value={form.district} onChange={set("district")} required />
+              <Field
+                label="Ponto de referência"
+                value={form.reference}
+                onChange={set("reference")}
+                placeholder="Perto da praça..."
+              />
+            </div>
           </fieldset>
         </div>
 
-        <aside className="h-fit rounded-2xl border border-border bg-card p-6 lg:sticky lg:top-24">
+        <aside className="h-fit rounded-2xl border border-border bg-card p-6 lg:sticky lg:top-28">
           <h2 className="text-xl">Resumo</h2>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-4 space-y-4">
             {lines.map((l) => (
-              <li key={l.key} className="flex justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">
-                  {l.qty}x {l.name}
-                  {l.addons.length > 0 && (
-                    <span className="block text-xs text-primary">
-                      {l.addons.map((a) => ADDONS.find((x) => x.id === a)?.name).join(", ")}
+              <li key={l.key} className="flex gap-3">
+                <img
+                  src={l.image}
+                  alt={l.name}
+                  loading="lazy"
+                  decoding="async"
+                  width={800}
+                  height={800}
+                  className="size-12 shrink-0 object-contain"
+                />
+                <div className="min-w-0 flex-1 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      {l.qty}x {l.name}
                     </span>
+                    <span>{brl(lineTotal(l))}</span>
+                  </div>
+                  {l.addons.length > 0 && (
+                    <p className="text-xs text-primary">{addonNames(l.addons)}</p>
                   )}
-                </span>
-                <span>{brl(lineTotal(l))}</span>
+                  {l.note && <p className="text-xs text-muted-foreground">Obs: {l.note}</p>}
+                </div>
               </li>
             ))}
           </ul>
@@ -306,7 +377,11 @@ function Checkout() {
             className="btn-neon mt-6 flex w-full items-center justify-center gap-2 rounded-full py-4 text-sm font-extrabold uppercase tracking-[0.14em] disabled:opacity-60"
           >
             {status === "paying" && <Loader2 className="size-4 animate-spin" />}
-            {status === "paying" ? "Confirmando..." : `Pagar ${brl(total)}`}
+            {status === "paying"
+              ? "Confirmando..."
+              : method === "cash"
+                ? "Confirmar pedido"
+                : `Pagar ${brl(total)}`}
           </button>
         </aside>
       </form>
